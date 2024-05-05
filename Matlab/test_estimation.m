@@ -5,7 +5,7 @@ format short g
 
 addpath('mfiles')
 % Set monotone pair
-z_a = 2;
+z_a = 3;
 z_b = 4;
 
 % Load dataset 

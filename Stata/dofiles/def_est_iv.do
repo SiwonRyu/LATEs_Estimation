@@ -143,6 +143,9 @@ real matrix var_2nd(G,YD,w,P,Si,b,IF_gam,dw,fs){
 	else{
 		V = Ai/G
 	}
+	if (rank(V) < 4){
+		V = V + 0.00001*I(4)
+	}
 	return(V)
 }
 
@@ -162,10 +165,9 @@ end
 
 cap program drop estim_late
 program estim_late, eclass
+qui{	
 	syntax varlist (min = 6) [,cov(varlist) inst(varlist) za(integer 10) zb(integer 10) fs nl]
 	tokenize `varlist'
-qui{	
-	*capture mat drop _all	
 	local Nvars `:word count `varlist''
 	
 	* Generate temporal variables
@@ -173,17 +175,14 @@ qui{
 		cap drop var_Y`unit'
 		cap drop var_D`unit'
 		cap drop var_Z`unit'
-		*cap drop var_T`unit'
-		
+
 		local idxY = `unit'
 		local idxD = 2+`unit'
 		local idxZ = 4+`unit'
-		*local idxT = 6+`unit'
-		
+
 		gen var_Y`unit' = ``idxY''
 		gen var_D`unit' = ``idxD''
 		gen var_Z`unit' = ``idxZ''
-		*gen var_T`unit' = ``idxT''		
 	}	
 	
 	gen var_D_both = var_D1*var_D2
@@ -250,5 +249,66 @@ qui{
 	noi ereturn display
 	
 	drop var_* *tilde* *1st P* iota
+} //qui end	
+end
+
+
+cap program drop estim_iv
+program estim_iv, eclass
+qui{
+	syntax varlist (min = 6) [,cov(varlist) inst(varlist)]
+	tokenize `varlist'
+	local Nvars `:word count `varlist''
+	
+	* Generate temporal variables
+	forv unit = 1/2{
+		cap drop var_Y`unit'
+		cap drop var_D`unit'
+		cap drop var_Z`unit'
+
+		local idxY = `unit'
+		local idxD = 2+`unit'
+		local idxZ = 4+`unit'
+		
+		gen var_Y`unit' = ``idxY''
+		gen var_D`unit' = ``idxD''
+		gen var_Z`unit' = ``idxZ''
+	}
+	
+	ivregress 2sls var_Y1 (i.var_D1##i.var_D2 = i.var_Z1##i.var_Z2) `cov' `inst',r
+	est store iv1
+	local iv1_dir_coef = _b[1.var_D1]
+	local iv1_dir_se = _se[1.var_D1]
+	local iv1_ind_coef = _b[1.var_D2]
+	local iv1_ind_se = _se[1.var_D2]
+
+	ivregress 2sls var_Y2 (i.var_D1##i.var_D2 = i.var_Z1##i.var_Z2)  `cov' `inst',r
+	est store iv2
+	local iv2_dir_coef = _b[1.var_D2]
+	local iv2_dir_se = _se[1.var_D2]
+	local iv2_ind_coef = _b[1.var_D1]
+	local iv2_ind_se = _se[1.var_D1]
+
+	mat b_iv = J(1,4,0)
+	mat V_iv = J(4,4,0)
+	mat b_iv[1,1] = `iv1_dir_coef'
+	mat b_iv[1,2] = `iv2_ind_coef'
+	mat b_iv[1,3] = `iv1_ind_coef'
+	mat b_iv[1,4] = `iv2_dir_coef' 
+	mat V_iv[1,1] = `iv1_dir_se'^2
+	mat V_iv[2,2] = `iv2_ind_se'^2
+	mat V_iv[3,3] = `iv1_ind_se'^2
+	mat V_iv[4,4] = `iv2_dir_se'^2
+	matlist b_iv
+	matlist V_iv
+
+	local xlist Direct_female Indirect_male Indirect_female Direct_male
+	matrix colnames b_iv = `xlist'
+	matrix colnames V_iv = `xlist'
+	matrix rownames V_iv = `xlist'
+
+	ereturn post b_iv V_iv
+	noi ereturn display
+	drop var_*
 } //qui end	
 end
