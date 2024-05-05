@@ -238,6 +238,7 @@ qui{
 		V = res[,2..5]
 		st_matrix("b", b')
 		st_matrix("V", V)
+		st_matrix("G", G)
 	}
 	local xlist Direct_female Indirect_female Direct_male Indirect_male
 	matrix colnames b = `xlist'
@@ -247,6 +248,7 @@ qui{
 	
 	ereturn post b V
 	noi ereturn display
+	noi di "Number of observations used = " G[1,1]
 	
 	drop var_* *tilde* *1st P* iota
 } //qui end	
@@ -281,6 +283,7 @@ qui{
 	local iv1_dir_se = _se[1.var_D1]
 	local iv1_ind_coef = _b[1.var_D2]
 	local iv1_ind_se = _se[1.var_D2]
+	local N1 = e(N)
 
 	ivregress 2sls var_Y2 (i.var_D1##i.var_D2 = i.var_Z1##i.var_Z2)  `cov' `inst',r
 	est store iv2
@@ -288,6 +291,7 @@ qui{
 	local iv2_dir_se = _se[1.var_D2]
 	local iv2_ind_coef = _b[1.var_D1]
 	local iv2_ind_se = _se[1.var_D1]
+	local N2 = e(N)
 
 	mat b_iv = J(1,4,0)
 	mat V_iv = J(4,4,0)
@@ -309,6 +313,7 @@ qui{
 
 	ereturn post b_iv V_iv
 	noi ereturn display
+	noi di "Number of observations used = " `N1' "/" `N2'
 	drop var_*
 } //qui end	
 end

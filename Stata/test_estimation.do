@@ -1,7 +1,7 @@
-cd "E:\Dropbox\Research\Projects\Topic 2 LATET (3YP)\Estimation Package\Stata"
+cd "`c(pwd)'"
 
 * Define estim_late command
-do "dofiles\def_est_iv.do"
+do "dofiles\def_estim.do"
 
 * Load test dataset
 use test_data.dta,clear
